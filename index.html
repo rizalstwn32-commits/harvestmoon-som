@@ -1,0 +1,1264 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Harvest Moon: Seeds of Memories</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap');
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+    }
+    /* 16:9 Cinematic Container */
+    #gameScreenWrapper {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #09090b;
+      overflow: hidden;
+    }
+    #gameStage {
+      position: relative;
+      width: 100%;
+      max-width: calc(100vh * (16 / 9));
+      aspect-ratio: 16 / 9;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.95);
+      overflow: hidden;
+      background: #000;
+    }
+    canvas#gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+    /* Authentic Seeds of Memories Orange Buttons */
+    .som-btn-orange {
+      background: linear-gradient(180deg, #f97316 0%, #ea580c 45%, #c2410c 100%);
+      border: 2.5px solid #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 4px 0 #7c2d12, 0 6px 14px rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.08s ease;
+      touch-action: manipulation;
+    }
+    .som-btn-orange:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #7c2d12;
+    }
+    /* Authentic Top-Left Date Placard */
+    .som-date-placard {
+      background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%);
+      border: 2.5px solid #78350f;
+      border-radius: 12px;
+      box-shadow: 0 3px 0 #451a03, 0 4px 10px rgba(0,0,0,0.3);
+      color: #451a03;
+    }
+    /* Modals */
+    .som-modal-box {
+      background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 40%, #fde68a 100%);
+      border: 3.5px solid #78350f;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.85), inset 0 2px 0 rgba(255,255,255,0.8);
+      color: #451a03;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d97706; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <div id="gameScreenWrapper">
+    <!-- 16:9 Game Container -->
+    <div id="gameStage">
+
+      <!-- Main Game Canvas (960x540 16:9 Virtual Resolution) -->
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+      <!-- ===================================================== -->
+      <!-- AUTHENTIC UI OVERLAY (PHOTO 2 REPLICA) -->
+      <!-- ===================================================== -->
+      <div id="gameUI" class="absolute inset-0 pointer-events-none z-10 p-3 flex flex-col justify-between">
+        
+        <!-- TOP BAR: Left Placard + Right Settings Button -->
+        <div class="flex items-start justify-between">
+          
+          <!-- Top-Left: Date, Time & Stamina (Photo 2) -->
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <!-- Date & Time Box -->
+            <div class="som-date-placard px-3 py-1 flex items-center gap-2.5">
+              <span id="uiWeatherIcon" class="text-2xl drop-shadow">☀️</span>
+              <div class="flex flex-col leading-tight">
+                <span id="uiDateText" class="font-black text-xs tracking-tight text-amber-950">Fri Winter 20</span>
+                <span id="uiTimeText" class="font-extrabold text-[11px] text-amber-900">9:33 AM Year 1</span>
+              </div>
+            </div>
+
+            <!-- Stamina Indicator (Smiley Face + 5 Hearts) -->
+            <div class="flex items-center gap-1.5 ml-1">
+              <div id="uiStaminaFace" class="w-8 h-8 rounded-full bg-yellow-400 border-2 border-amber-950 flex items-center justify-center text-base shadow" title="Stamina">
+                😊
+              </div>
+              <div id="uiHeartsContainer" class="flex items-center gap-0.5 text-base text-rose-500 drop-shadow">
+                <span>❤️</span><span>❤️</span><span>❤️</span><span>❤️</span><span>❤️</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top-Right: Settings Gear Button (Photo 2) -->
+          <button id="btnSettings" class="som-btn-orange w-12 h-12 pointer-events-auto" title="Pengaturan & Menu">
+            <svg class="w-6 h-6 text-white drop-shadow" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Notification Banner (Memories Unlocked / Tool Feedback) -->
+        <div id="uiNotifBanner" class="self-center pointer-events-none transition-all duration-400 opacity-0 -translate-y-3">
+          <div class="som-date-placard px-5 py-2 flex items-center gap-3 border-2 border-amber-600 shadow-2xl">
+            <span id="notifIcon" class="text-2xl animate-bounce">✨</span>
+            <div>
+              <div id="notifTitle" class="text-xs font-black text-amber-950 uppercase tracking-wide">SEED OF MEMORY RESTORED!</div>
+              <div id="notifDesc" class="text-[11px] font-bold text-amber-900">Pohon Roh Bintang kembali mekar bercahaya!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Context Prompt (Near Action) -->
+        <div id="uiContextPrompt" class="self-center pointer-events-none transition-all duration-200 opacity-0">
+          <div class="som-date-placard px-3.5 py-1 text-xs font-black text-amber-950 flex items-center gap-1.5 shadow-lg">
+            <span id="promptIcon">💬</span>
+            <span id="promptText">Ketuk tombol [💬] untuk Berinteraksi</span>
+          </div>
+        </div>
+
+        <!-- BOTTOM BAR: Bottom-Left Chat + Bottom-Right Bag (Photo 2) -->
+        <div class="flex items-end justify-between">
+          
+          <!-- Bottom-Left: Speech Bubble Chat Button (Photo 2) -->
+          <button id="btnChatAction" class="som-btn-orange w-14 h-14 pointer-events-auto" title="Bicara / Aksi">
+            <svg class="w-8 h-8 text-white drop-shadow" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+          </button>
+
+          <!-- Current Tool / Item Indicator (Subtle Center) -->
+          <div class="pointer-events-auto flex items-center gap-1.5 pb-1">
+            <div id="activeToolBadge" class="som-date-placard px-3 py-1 text-xs font-black flex items-center gap-1.5 cursor-pointer" title="Klik untuk Ganti Alat">
+              <span id="badgeToolIcon" class="text-base">⛏️</span>
+              <span id="badgeToolName" class="text-[11px] text-amber-950">Cangkul (Hoe)</span>
+            </div>
+          </div>
+
+          <!-- Bottom-Right: Backpack Rucksack Button (Photo 2) -->
+          <button id="btnBagAction" class="som-btn-orange w-14 h-14 pointer-events-auto" title="Tas Rucksack & Inventory">
+            <span class="text-2xl drop-shadow">🎒</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- ===================================================== -->
+      <!-- MOBILE LANDSCAPE ADVICE TIP (DISMISSIBLE) -->
+      <!-- ===================================================== -->
+      <div id="landscapeTip" class="absolute inset-0 bg-black/90 z-50 hidden flex-col items-center justify-center p-6 text-center">
+        <div class="text-5xl mb-4 animate-bounce">📱🔄</div>
+        <div class="text-lg font-black text-yellow-300 uppercase mb-2">Mode Layar 16:9 Landscape</div>
+        <p class="text-xs text-amber-100 max-w-xs mb-5 leading-relaxed">
+          Putar handphone kamu ke posisi <b>Mendatar (Landscape)</b> untuk menikmati grafik 16:9 Harvest Moon yang lebar dan sempurna persis di foto ke-2!
+        </p>
+        <button id="btnDismissTip" class="som-btn-orange px-6 py-2.5 text-xs font-black text-white rounded-xl">
+          Lanjut Bermain Sekarang 🌾
+        </button>
+      </div>
+
+      <!-- ===================================================== -->
+      <!-- MODAL: RUCKSACK / INVENTORY & TOOLS -->
+      <!-- ===================================================== -->
+      <div id="modalRucksack" class="absolute inset-0 bg-black/75 z-40 hidden items-center justify-center p-4">
+        <div class="som-modal-box w-full max-w-xl max-h-[90%] flex flex-col p-4 shadow-2xl">
+          <div class="flex items-center justify-between border-b-2 border-amber-800 pb-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🎒</span>
+              <div>
+                <div class="text-sm font-black text-amber-950">TAS RUCKSACK & PERKAKAS</div>
+                <div class="text-[10px] text-amber-800 font-bold">Pilih alat aktif atau kelola barang panen kebunmu</div>
+              </div>
+            </div>
+            <button id="btnCloseRucksack" class="som-btn-orange px-3 py-1 text-xs font-black text-white">✕ Tutup</button>
+          </div>
+
+          <!-- Tabs: Perkakas vs Isi Tas vs Benih Kenangan -->
+          <div class="flex items-center gap-2 mb-3 text-xs font-black">
+            <button id="tabBtnTools" class="px-3 py-1.5 rounded-lg bg-orange-600 text-white shadow">🛠️ Alat & Benih</button>
+            <button id="tabBtnItems" class="px-3 py-1.5 rounded-lg bg-amber-200 text-amber-950 hover:bg-amber-300">📦 Hasil Panen</button>
+            <button id="tabBtnMemories" class="px-3 py-1.5 rounded-lg bg-amber-200 text-amber-950 hover:bg-amber-300">✨ Seeds of Memories</button>
+          </div>
+
+          <!-- Tab Content: Tools List -->
+          <div id="tabContentTools" class="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
+
+          <!-- Tab Content: Items Inventory -->
+          <div id="tabContentItems" class="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs hidden"></div>
+
+          <!-- Tab Content: Seeds of Memories Book -->
+          <div id="tabContentMemories" class="flex-1 overflow-y-auto pr-1 space-y-2 text-xs hidden"></div>
+        </div>
+      </div>
+
+      <!-- ===================================================== -->
+      <!-- MODAL: SETTINGS & SEASONS & SAVE/LOAD -->
+      <!-- ===================================================== -->
+      <div id="modalSettingsBox" class="absolute inset-0 bg-black/75 z-40 hidden items-center justify-center p-4">
+        <div class="som-modal-box w-full max-w-md p-4 flex flex-col gap-3 shadow-2xl">
+          <div class="flex items-center justify-between border-b-2 border-amber-800 pb-2">
+            <div class="text-sm font-black text-amber-950">⚙️ PENGATURAN KEBUN</div>
+            <button id="btnCloseSettingsBox" class="som-btn-orange px-3 py-1 text-xs font-black text-white">✕</button>
+          </div>
+
+          <!-- Season Selector (Matches Photo 2 Winter or Spring/Summer/Fall) -->
+          <div>
+            <label class="block text-xs font-black text-amber-900 mb-1">Pilih Tema Musim (Season):</label>
+            <div class="grid grid-cols-4 gap-1.5 text-xs font-black">
+              <button class="season-btn p-2 rounded-lg bg-amber-200 text-amber-950 border border-amber-700" data-season="0">🌸 Spring</button>
+              <button class="season-btn p-2 rounded-lg bg-amber-200 text-amber-950 border border-amber-700" data-season="1">🌻 Summer</button>
+              <button class="season-btn p-2 rounded-lg bg-amber-200 text-amber-950 border border-amber-700" data-season="2">🍁 Fall</button>
+              <button class="season-btn p-2 rounded-lg bg-orange-600 text-white border border-amber-800 shadow" data-season="3">❄️ Winter</button>
+            </div>
+            <div class="text-[10px] text-amber-800 mt-1 italic">*Winter adalah tampilan salju otentik persis di foto ke-2!</div>
+          </div>
+
+          <!-- Sound Toggle -->
+          <div class="flex items-center justify-between p-2 rounded-xl bg-amber-100 border border-amber-700 text-xs font-black text-amber-950">
+            <span>Efek Suara & Musik Sintesis:</span>
+            <button id="btnAudioToggle" class="px-3 py-1 rounded-lg bg-orange-600 text-white">🔊 Aktif</button>
+          </div>
+
+          <!-- Save / Load Slots -->
+          <div class="space-y-1.5">
+            <div class="text-xs font-black text-amber-900">Simpan / Muat Progres:</div>
+            <div class="flex gap-2">
+              <button id="btnSaveGame" class="som-btn-orange flex-1 py-1.5 text-xs font-black text-white">💾 Simpan Progres</button>
+              <button id="btnLoadGame" class="som-modal-box flex-1 py-1.5 text-xs font-black text-amber-950 border-2 border-amber-700 hover:bg-amber-200">📂 Muat Simpanan</button>
+            </div>
+          </div>
+
+          <div class="text-center text-[10px] text-amber-800 font-bold border-t border-amber-800 pt-2">
+            Harvest Moon: Seeds of Memories (16:9 Canvas Edition)
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================== -->
+      <!-- MODAL: DIALOGUE BOX (WITH GILBERT & VILLAGERS) -->
+      <!-- ===================================================== -->
+      <div id="modalDialogueBox" class="absolute bottom-3 left-4 right-4 z-30 hidden">
+        <div class="som-modal-box p-3 flex gap-3 shadow-2xl items-center border-amber-900">
+          <div id="dlgAvatar" class="w-14 h-14 rounded-xl bg-amber-200 border-2 border-amber-700 flex items-center justify-center text-3xl flex-shrink-0 shadow-inner">
+            👱
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-0.5">
+              <span id="dlgName" class="text-xs font-black text-amber-950">Gilbert</span>
+              <span id="dlgHearts" class="text-xs text-rose-500 font-black">❤️❤️❤️🤍🤍</span>
+            </div>
+            <div id="dlgText" class="text-xs font-bold text-amber-900 leading-snug">
+              "Halo kawan! Udara musim dingin di Chestnut Valley sangat sejuk untuk memainkan petikan kecapi... ♪"
+            </div>
+          </div>
+          <button id="btnCloseDialogue" class="som-btn-orange px-3 py-1.5 text-xs font-black text-white flex-shrink-0 self-center">
+            Lanjut
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Game Engine Script -->
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      var canvas = document.getElementById('gameCanvas');
+      var ctx = canvas.getContext('2d');
+      var V_WIDTH = 960;
+      var V_HEIGHT = 540;
+
+      // =====================================================
+      // AUDIO SYNTHESIZER (WEB AUDIO API - ZERO EXTERNAL ASSETS)
+      // =====================================================
+      var audioCtx = null;
+      var soundEnabled = true;
+
+      function initAudio() {
+        if (!audioCtx) {
+          var AudioClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioClass) audioCtx = new AudioClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      }
+
+      function playSound(freq, type, duration, gainVal) {
+        if (!soundEnabled || !audioCtx) return;
+        try {
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = type || 'sine';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(gainVal || 0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (duration || 0.2));
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + (duration || 0.2));
+        } catch(e) {}
+      }
+
+      function sfxStep() { playSound(130 + Math.random() * 30, 'triangle', 0.08, 0.05); }
+      function sfxTill() {
+        playSound(160, 'sawtooth', 0.12, 0.15);
+        setTimeout(function(){ playSound(90, 'triangle', 0.14, 0.12); }, 50);
+      }
+      function sfxWater() {
+        playSound(440, 'sine', 0.18, 0.12);
+        setTimeout(function(){ playSound(560, 'sine', 0.22, 0.1); }, 70);
+      }
+      function sfxHarvest() {
+        playSound(523.25, 'triangle', 0.1, 0.18);
+        setTimeout(function(){ playSound(659.25, 'triangle', 0.12, 0.18); }, 80);
+        setTimeout(function(){ playSound(783.99, 'triangle', 0.22, 0.22); }, 160);
+      }
+      function sfxFanfare() {
+        [440, 554, 659, 880, 1108].forEach(function(n, idx){
+          setTimeout(function(){ playSound(n, 'triangle', 0.3, 0.2); }, idx * 110);
+        });
+      }
+
+      // =====================================================
+      // GAME STATE (PHOTO 2 WINTER 20 DEFAULT)
+      // =====================================================
+      var state = {
+        player: {
+          x: 480,
+          y: 280,
+          targetX: 480,
+          targetY: 280,
+          dir: 'down', // down, up, left, right
+          isMoving: false,
+          walkPhase: 0,
+          stamina: 100,
+          maxStamina: 100,
+          gold: 500,
+          activeTool: 'hoe'
+        },
+        time: {
+          dayOfWeek: 'Fri',
+          seasonIdx: 3, // 3: Winter (Matches Photo 2)
+          day: 20,
+          hour: 9,
+          minute: 33,
+          year: 1,
+          weather: 'Sun'
+        },
+        // 4 rows x 6 cols Soil Plots on the Right Side (Photo 2)
+        plots: [],
+        trees: [],
+        inventory: [
+          { id: 'turnip_seed', name: 'Bibit Turnip (Winter)', icon: '🌱', qty: 10, type: 'tool', desc: 'Biji lobak tahan dingin musim salju.' },
+          { id: 'straw_seed', name: 'Bibit Stroberi Manis', icon: '🍓', qty: 6, type: 'tool', desc: 'Buah manis kegemaran April & Emily.' },
+          { id: 'turnip', name: 'Lobak Segar (Turnip)', icon: '🥕', qty: 4, type: 'item', desc: 'Hasil panen segar kaya nutrisi.' },
+          { id: 'wood', name: 'Kayu Bangunan (Lumber)', icon: '🪵', qty: 12, type: 'item', desc: 'Kayu tebangan untuk renovasi kebun.' },
+          { id: 'stone', name: 'Batu Mineral', icon: '🪨', qty: 8, type: 'item', desc: 'Batu untuk fondasi sumur & kandang.' }
+        ],
+        memories: [
+          { id: 'm01', no: '001', name: 'Savior of the Farm', desc: 'Bicara dengan Rowan dan sepakat merawat kebun Sprite Tree.', reward: '6 Biji Turnip', done: false },
+          { id: 'm02', no: '002', name: 'First Crop Harvested', desc: 'Panen tanaman sayur atau buah pertamamu di kebun.', reward: '100 Gold', done: false },
+          { id: 'm03', no: '003', name: 'The Fishing Bard', desc: 'Temui Gilbert si pemusik pengelana di dermaga/jalan.', reward: '5 Umpan Berkualitas', done: false },
+          { id: 'm04', no: '004', name: 'The Shy Flower Girl', desc: 'Sapa April si gadis bunga di toko bunga.', reward: '3 Bunga Tulip', done: false },
+          { id: 'm05', no: '005', name: 'Early Bird', desc: 'Tidur di kasur rumah dan bangun menyambut pagi cerah.', reward: 'Pemulihan Energi', done: false }
+        ],
+        npc: {
+          name: 'Gilbert',
+          x: 270,
+          y: 135,
+          hearts: 60,
+          quote: 'Halo kawan! Udara musim dingin di Chestnut Valley sangat sejuk untuk memainkan petikan kecapi... ♪'
+        }
+      };
+
+      // Authentic Tools List
+      var TOOLS = [
+        { id: 'hoe', name: 'Cangkul (Hoe)', icon: '⛏️', desc: 'Cangkul petak tanah gembur untuk bercocok tanam.' },
+        { id: 'can', name: 'Penyiram Air (Can)', icon: '🚿', desc: 'Siram air bersih ke tanaman setiap hari.' },
+        { id: 'turnip_seed', name: 'Bibit Turnip (Seed)', icon: '🌱', desc: 'Tanam benih sayuran di petak tanah.' },
+        { id: 'axe', name: 'Kapak (Axe)', icon: '🪓', desc: 'Tebang pohon untuk mengumpulkan balok kayu.' },
+        { id: 'hammer', name: 'Palu (Hammer)', icon: '🔨', desc: 'Pecahkan batu mineral untuk material fondasi.' },
+        { id: 'rod', name: 'Joran Pancing (Rod)', icon: '🎣', desc: 'Pancing ikan segar di aliran sungai.' }
+      ];
+
+      // Initialize Soil Plots Grid (Matches Photo 2 layout on right)
+      var gridStartX = 620;
+      var gridStartY = 145;
+      var plotW = 48;
+      var plotH = 40;
+      var plotGapX = 8;
+      var plotGapY = 8;
+
+      for (var r = 0; r < 5; r++) {
+        for (var c = 0; c < 5; c++) {
+          var px = gridStartX + c * (plotW + plotGapX);
+          var py = gridStartY + r * (plotH + plotGapY);
+          state.plots.push({
+            r: r, c: c, x: px, y: py, w: plotW, h: plotH,
+            tilled: true,
+            watered: (r % 2 === 0),
+            hasCrop: true,
+            cropStage: (r === 2 ? 3 : (r < 2 ? 1 : 2)), // row 2 is ripe
+            cropType: 'turnip'
+          });
+        }
+      }
+
+      // Initialize Orchard Trees in front of soil (Matches Photo 2)
+      var treeRowY = 320;
+      for (var t = 0; t < 6; t++) {
+        state.trees.push({
+          x: gridStartX - 15 + t * 58,
+          y: treeRowY,
+          type: 'apple'
+        });
+      }
+
+      // =====================================================
+      // DRAWING ENGINE: AUTHENTIC 2.5D REPLICA (PHOTO 2)
+      // =====================================================
+      function drawGameScene() {
+        ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+        var isWinter = (state.time.seasonIdx === 3);
+
+        // 1. TERRAIN BASE
+        if (isWinter) {
+          // Photo 2 Snowy Winter Ground
+          ctx.fillStyle = '#e8f0f8';
+          ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+          // Subtle snow texture patches & footprint marks
+          ctx.fillStyle = '#dbe5f0';
+          for (var i = 0; i < 25; i++) {
+            ctx.beginPath();
+            ctx.ellipse(80 + (i * 37) % 850, 40 + (i * 53) % 460, 16, 7, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Pale sandy walking path leading to Barn & Well (Photo 2)
+          ctx.fillStyle = '#e6ddce';
+          ctx.beginPath();
+          ctx.moveTo(120, 240);
+          ctx.quadraticCurveTo(240, 200, 320, 120);
+          ctx.lineTo(760, 100);
+          ctx.lineTo(760, 380);
+          ctx.quadraticCurveTo(550, 360, 420, 420);
+          ctx.quadraticCurveTo(260, 380, 120, 240);
+          ctx.fill();
+
+        } else {
+          // Lush Green Seasons
+          ctx.fillStyle = (state.time.seasonIdx === 0) ? '#68bb38' : ((state.time.seasonIdx === 1) ? '#4fa82c' : '#a87e2b');
+          ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+          // Dirt Path
+          ctx.fillStyle = '#d4b483';
+          ctx.beginPath();
+          ctx.ellipse(450, 260, 380, 160, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 2. CIRCULAR STONE WATER WELL (Photo 2 left side)
+        drawStoneWell(220, 210, isWinter);
+
+        // 3. BARN WITH TEAL CURTAINS & BELL (Photo 2 top-right)
+        drawFarmBarn(760, 60, isWinter);
+
+        // 4. SOIL PLOTS GRID (Photo 2 right side)
+        drawSoilPlotsGrid();
+
+        // 5. ORCHARD ROW TREES (Photo 2)
+        drawOrchardTrees();
+
+        // 6. GILBERT (NPC in Photo 2)
+        drawGilbertNPC(state.npc.x, state.npc.y);
+
+        // 7. PETE (PROTAGONIST CHIBI - Photo 2)
+        drawPetePlayer(state.player.x, state.player.y, state.player.dir, state.player.walkPhase);
+      }
+
+      // DRAW STONE WATER WELL (Matches Photo 2)
+      function drawStoneWell(wx, wy, isSnow) {
+        // Drop shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(wx, wy + 20, 26, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Well stone cylinder
+        ctx.fillStyle = '#78716c';
+        ctx.beginPath();
+        ctx.ellipse(wx, wy + 10, 24, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stone blocks shading
+        ctx.fillStyle = '#a8a29e';
+        ctx.beginPath();
+        ctx.ellipse(wx - 2, wy + 7, 21, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Well water center (Deep blue)
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.ellipse(wx, wy + 7, 16, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wooden crossbeam & pulley
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(wx - 18, wy - 14, 4, 20);
+        ctx.fillRect(wx + 14, wy - 14, 4, 20);
+        ctx.fillRect(wx - 18, wy - 14, 36, 4);
+
+        // Small wooden bucket
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(wx + 4, wy - 2, 7, 7);
+
+        // Snow on rim (Photo 2)
+        if (isSnow) {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(wx, wy - 1, 23, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // DRAW FARM BARN (Matches Photo 2 Top-Right)
+      function drawFarmBarn(bx, by, isSnow) {
+        // Barn Roof
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(bx - 60, by - 45, 120, 60);
+
+        // Wood plank siding
+        ctx.fillStyle = '#a16207';
+        ctx.fillRect(bx - 55, by - 25, 110, 55);
+
+        // Dark Barn Doorway Entrance
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(bx - 18, by - 15, 36, 45);
+
+        // Teal / Cyan Door Drapery Curtains (Photo 2)
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(bx - 26, by - 15, 8, 45);
+        ctx.fillRect(bx + 18, by - 15, 8, 45);
+
+        // Hanging Brass Bell on Post (Photo 2)
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(bx + 32, by - 25, 3, 20);
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(bx + 33.5, by - 6, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Roof Snow Cap (Photo 2)
+        if (isSnow) {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(bx - 65, by - 45);
+          ctx.lineTo(bx + 65, by - 45);
+          ctx.lineTo(bx + 62, by - 38);
+          ctx.lineTo(bx - 62, by - 38);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // DRAW SOIL PLOTS GRID (Matches Photo 2 Right Side)
+      function drawSoilPlotsGrid() {
+        state.plots.forEach(function(p) {
+          // Plot furrow raised base (Dark earth)
+          ctx.fillStyle = p.watered ? '#3b2219' : '#5c3d2e';
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+
+          // Inner tilled trench
+          ctx.fillStyle = p.watered ? '#26150f' : '#45291d';
+          ctx.fillRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6);
+
+          // Growing Crop / Seedling
+          if (p.hasCrop) {
+            var cx = p.x + p.w / 2;
+            var cy = p.y + p.h / 2;
+
+            if (p.cropStage === 1) {
+              // Cute two-leaf green sprout (Matches Photo 2!)
+              ctx.fillStyle = '#15803d';
+              ctx.beginPath();
+              ctx.ellipse(cx - 4, cy - 2, 4, 2, -0.4, 0, Math.PI * 2);
+              ctx.ellipse(cx + 4, cy - 2, 4, 2, 0.4, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#4ade80';
+              ctx.fillRect(cx - 1, cy - 4, 2, 6);
+            } else if (p.cropStage === 2) {
+              // Bushier plant
+              ctx.fillStyle = '#16a34a';
+              ctx.beginPath();
+              ctx.arc(cx - 5, cy - 3, 6, 0, Math.PI * 2);
+              ctx.arc(cx + 5, cy - 3, 6, 0, Math.PI * 2);
+              ctx.arc(cx, cy - 7, 7, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (p.cropStage >= 3) {
+              // Ripe Turnip with white bulb & green leaves!
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.arc(cx, cy + 2, 8, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#22c55e';
+              ctx.beginPath();
+              ctx.arc(cx, cy - 7, 5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        });
+      }
+
+      // DRAW ORCHARD TREES (Matches Photo 2 Row)
+      function drawOrchardTrees() {
+        state.trees.forEach(function(t) {
+          // Drop shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.2)';
+          ctx.beginPath();
+          ctx.ellipse(t.x, t.y + 16, 14, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Tree trunk
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(t.x - 3, t.y - 12, 6, 26);
+
+          // Leafy Canopy (Vibrant Green)
+          ctx.fillStyle = '#16a34a';
+          ctx.beginPath();
+          ctx.arc(t.x, t.y - 28, 19, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(t.x - 4, t.y - 32, 13, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Red apples
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(t.x - 6, t.y - 26, 3, 0, Math.PI * 2);
+          ctx.arc(t.x + 6, t.y - 28, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      // DRAW GILBERT NPC (Matches Photo 2)
+      function drawGilbertNPC(gx, gy) {
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(gx, gy + 16, 10, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs / Pants (Brown)
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(gx - 4, gy + 4, 3.5, 12);
+        ctx.fillRect(gx + 0.5, gy + 4, 3.5, 12);
+
+        // Boots
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(gx - 4.5, gy + 13, 4, 4);
+        ctx.fillRect(gx + 0.5, gy + 13, 4, 4);
+
+        // Torso / White shirt + Brown Vest
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(gx - 5, gy - 7, 10, 11);
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(gx - 5, gy - 7, 3, 11);
+        ctx.fillRect(gx + 2, gy - 7, 3, 11);
+
+        // Head & Anime Face
+        ctx.fillStyle = '#ffedd5';
+        ctx.beginPath();
+        ctx.arc(gx, gy - 16, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(gx - 4, gy - 16, 2, 3);
+        ctx.fillRect(gx + 2, gy - 16, 2, 3);
+
+        // Styled Blonde Hair (Gilbert - Photo 2)
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(gx, gy - 20, 9, 0, Math.PI * 2);
+        ctx.fill();
+        // Hair tufts
+        ctx.beginPath();
+        ctx.moveTo(gx - 8, gy - 22);
+        ctx.lineTo(gx - 12, gy - 16);
+        ctx.lineTo(gx - 4, gy - 18);
+        ctx.moveTo(gx + 8, gy - 22);
+        ctx.lineTo(gx + 12, gy - 16);
+        ctx.lineTo(gx + 4, gy - 18);
+        ctx.fill();
+      }
+
+      // DRAW PETE (PROTAGONIST CHIBI - EXACT MATCH WITH PHOTO 2)
+      function drawPetePlayer(px, py, dir, walkPhase) {
+        ctx.save();
+        ctx.translate(px, py);
+
+        var swing = Math.sin(walkPhase) * 4;
+
+        // Ground Drop Shadow (Photo 2)
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0, 15, 11, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 1. LEGS & BOOTS
+        var lLegY = 2 + (state.player.isMoving ? swing : 0);
+        var rLegY = 2 - (state.player.isMoving ? swing : 0);
+
+        // Blue Overalls Pant Legs
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(-5, lLegY, 4, 11);
+        ctx.fillRect(1, rLegY, 4, 11);
+
+        // Brown Boots (Photo 2)
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(-5.5, lLegY + 8, 4.5, 4);
+        ctx.fillRect(1, rLegY + 8, 4.5, 4);
+
+        // 2. TORSO & DENIM OVERALLS (Photo 2)
+        // Yellow/White Shirt
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(-6, -9, 12, 12);
+
+        // Blue Denim Dungarees / Overalls Bib
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(-5, -6, 10, 9);
+        // Overalls Straps
+        ctx.fillStyle = '#1e40af';
+        ctx.fillRect(-4.5, -9, 2.5, 4);
+        ctx.fillRect(2, -9, 2.5, 4);
+
+        // Red Bandana / Neckerchief (Photo 2 Trademark!)
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.moveTo(-5, -9);
+        ctx.lineTo(5, -9);
+        ctx.lineTo(0, -5);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. ARMS
+        var armSwing = state.player.isMoving ? Math.sin(walkPhase) * 3 : 0;
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(-8, -8 + armSwing, 3, 8);
+        ctx.fillRect(5, -8 - armSwing, 3, 8);
+        // Hands
+        ctx.fillStyle = '#ffedd5';
+        ctx.fillRect(-8, -1 + armSwing, 3, 3);
+        ctx.fillRect(5, -1 - armSwing, 3, 3);
+
+        // 4. HEAD & CHIBI FACE
+        ctx.fillStyle = '#ffedd5';
+        ctx.beginPath();
+        ctx.arc(0, -18, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Anime Eyes & Smile
+        if (dir !== 'up') {
+          var eyeOffsetX = (dir === 'left') ? -2 : ((dir === 'right') ? 2 : 0);
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(-4 + eyeOffsetX, -19, 2.5, 4);
+          ctx.fillRect(1.5 + eyeOffsetX, -19, 2.5, 4);
+          // Catchlight
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(-3.5 + eyeOffsetX, -18.5, 1, 1.5);
+          ctx.fillRect(2 + eyeOffsetX, -18.5, 1, 1.5);
+          // Smile
+          ctx.strokeStyle = '#b45309';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(eyeOffsetX, -14, 2, 0, Math.PI);
+          ctx.stroke();
+        }
+
+        // Brown Anime Hair (Photo 2)
+        ctx.fillStyle = '#5c3317';
+        ctx.beginPath();
+        ctx.arc(0, -22, 10, 0, Math.PI * 2);
+        ctx.fill();
+        // Hair bangs and tufts
+        ctx.beginPath();
+        ctx.moveTo(-9, -22);
+        ctx.lineTo(-11, -16);
+        ctx.lineTo(-5, -19);
+        ctx.lineTo(-2, -14);
+        ctx.lineTo(2, -18);
+        ctx.lineTo(6, -14);
+        ctx.lineTo(10, -17);
+        ctx.lineTo(8, -23);
+        ctx.fill();
+
+        // Pete's Straw Hat (Photo 2)
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.ellipse(0, -26, 14, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(-7, -33, 14, 8);
+        // Hat Red Ribbon
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(-7.2, -27.5, 14.4, 2.5);
+
+        ctx.restore();
+      }
+
+      // =====================================================
+      // GAMEPLAY LOGIC: MOVEMENT, FARMING & SEEDS OF MEMORIES
+      // =====================================================
+      function movePlayerTo(targetX, targetY) {
+        initAudio();
+        state.player.targetX = Math.max(80, Math.min(880, targetX));
+        state.player.targetY = Math.max(90, Math.min(480, targetY));
+      }
+
+      function updatePlayerMovement() {
+        var p = state.player;
+        var dx = p.targetX - p.x;
+        var dy = p.targetY - p.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 3) {
+          p.isMoving = true;
+          var speed = 3.6;
+          p.x += (dx / dist) * speed;
+          p.y += (dy / dist) * speed;
+
+          if (Math.abs(dx) > Math.abs(dy)) {
+            p.dir = (dx > 0) ? 'right' : 'left';
+          } else {
+            p.dir = (dy > 0) ? 'down' : 'up';
+          }
+
+          p.walkPhase += 0.35;
+          if (Math.sin(p.walkPhase) > 0.9) sfxStep();
+        } else {
+          p.isMoving = false;
+          p.walkPhase = 0;
+        }
+      }
+
+      // Action / Tool Trigger
+      function executeAction() {
+        initAudio();
+        var px = state.player.x;
+        var py = state.player.y;
+
+        // 1. Check Dialogue with Gilbert (Photo 2)
+        var dGilbert = Math.hypot(state.npc.x - px, state.npc.y - py);
+        if (dGilbert < 50) {
+          openDialogue(state.npc);
+          unlockMemory('m03');
+          return;
+        }
+
+        // 2. Check Farming on Soil Plot
+        var nearestPlot = null;
+        var minDist = 45;
+        state.plots.forEach(function(plot) {
+          var cx = plot.x + plot.w / 2;
+          var cy = plot.y + plot.h / 2;
+          var d = Math.hypot(cx - px, cy - py);
+          if (d < minDist) {
+            minDist = d;
+            nearestPlot = plot;
+          }
+        });
+
+        if (nearestPlot) {
+          if (nearestPlot.cropStage >= 3) {
+            // Harvest Ripe Turnip!
+            sfxHarvest();
+            nearestPlot.hasCrop = false;
+            nearestPlot.cropStage = 0;
+            state.player.gold += 60;
+            showNotif('🧺', 'PANEN LOBAK BERHASIL!', '+1 Lobak Segar ditambahkan ke Tas (+60 G)!');
+            unlockMemory('m02');
+            updateTopUI();
+            return;
+          } else if (state.player.activeTool === 'can') {
+            sfxWater();
+            nearestPlot.watered = true;
+            drainStamina(2);
+            showNotif('🚿', 'TANAH DISIRAM AIR', 'Tanah basah subur, tunas akan tumbuh besok!');
+            return;
+          } else if (state.player.activeTool === 'hoe') {
+            sfxTill();
+            nearestPlot.tilled = true;
+            drainStamina(2);
+            showNotif('⛏️', 'TANAH DICANGKUL', 'Petak tanah gembur siap ditanami benih.');
+            return;
+          } else if (state.player.activeTool === 'turnip_seed') {
+            sfxTill();
+            nearestPlot.hasCrop = true;
+            nearestPlot.cropStage = 1;
+            showNotif('🌱', 'BENIH DITANAM!', 'Rawat tanaman hingga panen!');
+            return;
+          }
+        }
+
+        // 3. Default action tool swing
+        sfxTill();
+        showNotif('⛏️', 'MENJELAJAHI KEBUN', 'Gunakan cangkul pada petak tanah atau siram tanaman!');
+      }
+
+      function drainStamina(amt) {
+        state.player.stamina = Math.max(0, state.player.stamina - amt);
+        updateTopUI();
+      }
+
+      function unlockMemory(id) {
+        var m = state.memories.find(function(x){ return x.id === id; });
+        if (!m || m.done) return;
+        m.done = true;
+        sfxFanfare();
+        showNotif('✨', 'BENIH KENANGAN #' + m.no + ' PULIH!', m.name + ' - ' + m.desc);
+        renderMemoriesList();
+      }
+
+      function showNotif(icon, title, desc) {
+        var banner = document.getElementById('uiNotifBanner');
+        var ico = document.getElementById('notifIcon');
+        var ttl = document.getElementById('notifTitle');
+        var dsc = document.getElementById('notifDesc');
+        if (!banner || !ico || !ttl || !dsc) return;
+
+        ico.textContent = icon;
+        ttl.textContent = title;
+        dsc.textContent = desc;
+
+        banner.classList.remove('opacity-0', '-translate-y-3');
+        banner.classList.add('opacity-100', 'translate-y-0');
+
+        setTimeout(function() {
+          banner.classList.remove('opacity-100', 'translate-y-0');
+          banner.classList.add('opacity-0', '-translate-y-3');
+        }, 3500);
+      }
+
+      function updateTopUI() {
+        var seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+        var icons = ['🌸', '🌻', '🍁', '❄️'];
+        var sName = seasons[state.time.seasonIdx] || 'Winter';
+        var sIco = icons[state.time.seasonIdx] || '❄️';
+
+        var dt = document.getElementById('uiDateText');
+        if (dt) dt.textContent = state.time.dayOfWeek + ' ' + sName + ' ' + state.time.day;
+
+        var tm = document.getElementById('uiTimeText');
+        if (tm) {
+          var h = String(state.time.hour).padStart(2, '0');
+          var m = String(state.time.minute).padStart(2, '0');
+          var ap = state.time.hour >= 12 ? 'PM' : 'AM';
+          tm.textContent = h + ':' + m + ' ' + ap + ' Year ' + state.time.year;
+        }
+
+        // Stamina Face & Hearts
+        var face = document.getElementById('uiStaminaFace');
+        var hCont = document.getElementById('uiHeartsContainer');
+        if (face && hCont) {
+          var st = state.player.stamina;
+          face.textContent = (st > 70) ? '😊' : ((st > 30) ? '😐' : '😫');
+          var fullHearts = Math.ceil(st / 20);
+          var str = '';
+          for (var i = 0; i < 5; i++) {
+            str += (i < fullHearts) ? '❤️' : '🤍';
+          }
+          hCont.innerHTML = str;
+        }
+
+        // Active tool badge
+        var tObj = TOOLS.find(function(t){ return t.id === state.player.activeTool; }) || TOOLS[0];
+        var bIco = document.getElementById('badgeToolIcon');
+        var bName = document.getElementById('badgeToolName');
+        if (bIco && bName) {
+          bIco.textContent = tObj.icon;
+          bName.textContent = tObj.name;
+        }
+      }
+
+      // Dialog Modal
+      function openDialogue(npc) {
+        var m = document.getElementById('modalDialogueBox');
+        var name = document.getElementById('dlgName');
+        var text = document.getElementById('dlgText');
+        if (m && name && text) {
+          name.textContent = npc.name;
+          text.textContent = '"' + npc.quote + '"';
+          m.classList.remove('hidden');
+        }
+      }
+
+      document.getElementById('btnCloseDialogue').addEventListener('click', function() {
+        var m = document.getElementById('modalDialogueBox');
+        if (m) m.classList.add('hidden');
+      });
+
+      // Modals: Rucksack & Settings
+      function toggleRucksack() {
+        initAudio();
+        var m = document.getElementById('modalRucksack');
+        if (!m) return;
+        m.classList.toggle('hidden');
+        m.classList.toggle('flex');
+        renderToolsList();
+      }
+
+      function toggleSettings() {
+        initAudio();
+        var m = document.getElementById('modalSettingsBox');
+        if (!m) return;
+        m.classList.toggle('hidden');
+        m.classList.toggle('flex');
+      }
+
+      document.getElementById('btnBagAction').addEventListener('click', toggleRucksack);
+      document.getElementById('btnCloseRucksack').addEventListener('click', toggleRucksack);
+
+      document.getElementById('btnSettings').addEventListener('click', toggleSettings);
+      document.getElementById('btnCloseSettingsBox').addEventListener('click', toggleSettings);
+
+      document.getElementById('btnChatAction').addEventListener('click', executeAction);
+      document.getElementById('activeToolBadge').addEventListener('click', toggleRucksack);
+
+      // Dismiss Landscape Advice Tip
+      var btnDismissTip = document.getElementById('btnDismissTip');
+      var landscapeTip = document.getElementById('landscapeTip');
+      if (btnDismissTip && landscapeTip) {
+        btnDismissTip.addEventListener('click', function() {
+          landscapeTip.classList.add('hidden');
+          landscapeTip.classList.remove('flex');
+        });
+      }
+
+      // Rucksack Tabs
+      var tabBtnTools = document.getElementById('tabBtnTools');
+      var tabBtnItems = document.getElementById('tabBtnItems');
+      var tabBtnMemories = document.getElementById('tabBtnMemories');
+      var contentTools = document.getElementById('tabContentTools');
+      var contentItems = document.getElementById('tabContentItems');
+      var contentMemories = document.getElementById('tabContentMemories');
+
+      function switchRucksackTab(activeTab) {
+        [tabBtnTools, tabBtnItems, tabBtnMemories].forEach(function(b){
+          b.className = 'px-3 py-1.5 rounded-lg bg-amber-200 text-amber-950 hover:bg-amber-300';
+        });
+        [contentTools, contentItems, contentMemories].forEach(function(c){ c.classList.add('hidden'); });
+
+        if (activeTab === 'tools') {
+          tabBtnTools.className = 'px-3 py-1.5 rounded-lg bg-orange-600 text-white shadow';
+          contentTools.classList.remove('hidden');
+          renderToolsList();
+        } else if (activeTab === 'items') {
+          tabBtnItems.className = 'px-3 py-1.5 rounded-lg bg-orange-600 text-white shadow';
+          contentItems.classList.remove('hidden');
+          renderItemsList();
+        } else if (activeTab === 'memories') {
+          tabBtnMemories.className = 'px-3 py-1.5 rounded-lg bg-orange-600 text-white shadow';
+          contentMemories.classList.remove('hidden');
+          renderMemoriesList();
+        }
+      }
+
+      tabBtnTools.addEventListener('click', function(){ switchRucksackTab('tools'); });
+      tabBtnItems.addEventListener('click', function(){ switchRucksackTab('items'); });
+      tabBtnMemories.addEventListener('click', function(){ switchRucksackTab('memories'); });
+
+      function renderToolsList() {
+        contentTools.innerHTML = '';
+        TOOLS.forEach(function(t) {
+          var card = document.createElement('div');
+          var isActive = (state.player.activeTool === t.id);
+          card.className = 'p-2.5 rounded-xl border-2 flex items-center gap-2 cursor-pointer transition-all ' +
+            (isActive ? 'bg-orange-500 text-white border-white shadow-md' : 'bg-amber-100 text-amber-950 border-amber-700 hover:bg-amber-200');
+          card.innerHTML = 
+            '<span class="text-2xl">' + t.icon + '</span>' +
+            '<div class="flex-1 min-w-0 leading-tight">' +
+              '<div class="font-black text-xs truncate">' + t.name + '</div>' +
+              '<div class="text-[10px] opacity-80">' + (isActive ? '● Sedang Dipakai' : 'Klik untuk Pilih') + '</div>' +
+            '</div>';
+          card.addEventListener('click', function() {
+            state.player.activeTool = t.id;
+            updateTopUI();
+            renderToolsList();
+            showNotif(t.icon, 'ALAT DIGANTI: ' + t.name, t.desc);
+          });
+          contentTools.appendChild(card);
+        });
+      }
+
+      function renderItemsList() {
+        contentItems.innerHTML = '';
+        state.inventory.forEach(function(item) {
+          var card = document.createElement('div');
+          card.className = 'p-2.5 rounded-xl bg-amber-100 border-2 border-amber-700 flex items-center gap-2 text-amber-950';
+          card.innerHTML = 
+            '<span class="text-2xl">' + item.icon + '</span>' +
+            '<div class="flex-1 min-w-0 leading-tight">' +
+              '<div class="font-black text-xs truncate">' + item.name + '</div>' +
+              '<div class="text-[10px] text-emerald-700 font-extrabold">Jumlah: x' + item.qty + '</div>' +
+            '</div>';
+          contentItems.appendChild(card);
+        });
+      }
+
+      function renderMemoriesList() {
+        contentMemories.innerHTML = '';
+        state.memories.forEach(function(m) {
+          var card = document.createElement('div');
+          card.className = 'p-2.5 rounded-xl border-2 flex items-center justify-between gap-2 ' +
+            (m.done ? 'bg-amber-200 border-amber-800 text-amber-950 shadow' : 'bg-stone-200 border-stone-400 text-stone-600 opacity-70');
+          card.innerHTML = 
+            '<div>' +
+              '<div class="font-black text-xs">#' + m.no + ' ' + m.name + '</div>' +
+              '<div class="text-[11px] font-bold leading-tight">' + m.desc + '</div>' +
+            '</div>' +
+            '<span class="text-[10px] px-2 py-0.5 rounded-full font-black ' + (m.done ? 'bg-emerald-600 text-white' : 'bg-stone-400 text-white') + '">' +
+              (m.done ? '✓ PULIH' : 'TERKUNCI') +
+            '</span>';
+          contentMemories.appendChild(card);
+        });
+      }
+
+      // Season Switcher Buttons (Matches Photo 2 Winter)
+      var seasonBtns = document.querySelectorAll('.season-btn');
+      seasonBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var sIdx = parseInt(btn.getAttribute('data-season'));
+          state.time.seasonIdx = sIdx;
+          seasonBtns.forEach(function(b){
+            b.className = 'season-btn p-2 rounded-lg bg-amber-200 text-amber-950 border border-amber-700';
+          });
+          btn.className = 'season-btn p-2 rounded-lg bg-orange-600 text-white border border-amber-800 shadow';
+          updateTopUI();
+          showNotif('❄️', 'TEMA MUSIM DIUBAH', 'Musim kini berganti menjadi ' + ['Spring', 'Summer', 'Fall', 'Winter'][sIdx]);
+        });
+      });
+
+      // Sound toggle
+      var btnAudio = document.getElementById('btnAudioToggle');
+      if (btnAudio) {
+        btnAudio.addEventListener('click', function() {
+          initAudio();
+          soundEnabled = !soundEnabled;
+          btnAudio.textContent = soundEnabled ? '🔊 Aktif' : '🔇 Hening';
+        });
+      }
+
+      // Save / Load handlers
+      document.getElementById('btnSaveGame').addEventListener('click', function() {
+        try {
+          localStorage.setItem('hm_som_save_data', JSON.stringify({
+            player: state.player,
+            time: state.time,
+            inventory: state.inventory,
+            memories: state.memories
+          }));
+          showNotif('💾', 'GAME TERSIMPAN!', 'Seluruh progres kebun berhasil disimpan di browser!');
+        } catch(e) {}
+      });
+
+      document.getElementById('btnLoadGame').addEventListener('click', function() {
+        try {
+          var raw = localStorage.getItem('hm_som_save_data');
+          if (raw) {
+            var d = JSON.parse(raw);
+            if (d && d.player) {
+              state.player = Object.assign(state.player, d.player);
+              state.time = Object.assign(state.time, d.time);
+              if (d.inventory) state.inventory = d.inventory;
+              if (d.memories) state.memories = d.memories;
+              updateTopUI();
+              showNotif('📂', 'DATA DIMUAT!', 'Selamat datang kembali di kebunmu!');
+            }
+          }
+        } catch(e) {}
+      });
+
+      // Canvas Pointer Click / Tap to Move
+      canvas.addEventListener('pointerdown', function(e) {
+        initAudio();
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = V_WIDTH / rect.width;
+        var scaleY = V_HEIGHT / rect.height;
+        var clickX = (e.clientX - rect.left) * scaleX;
+        var clickY = (e.clientY - rect.top) * scaleY;
+        movePlayerTo(clickX, clickY);
+      });
+
+      // Keyboard WASD / Arrows
+      window.addEventListener('keydown', function(e) {
+        initAudio();
+        var step = 14;
+        if (e.key === 'w' || e.key === 'ArrowUp') state.player.targetY -= step;
+        if (e.key === 's' || e.key === 'ArrowDown') state.player.targetY += step;
+        if (e.key === 'a' || e.key === 'ArrowLeft') state.player.targetX -= step;
+        if (e.key === 'd' || e.key === 'ArrowRight') state.player.targetX += step;
+        if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          executeAction();
+        }
+        if (e.key.toLowerCase() === 'e') executeAction();
+        if (e.key.toLowerCase() === 'b') toggleRucksack();
+      });
+
+      // Main 60 FPS Loop
+      function gameLoop() {
+        requestAnimationFrame(gameLoop);
+        updatePlayerMovement();
+        drawGameScene();
+      }
+
+      // Start game
+      updateTopUI();
+      gameLoop();
+    });
+  </script>
+</body>
+</html>
+```
